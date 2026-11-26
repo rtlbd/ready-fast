@@ -1,0 +1,219 @@
+
+# ==========================================
+# ready-fast - Git Ignore
+# ==========================================
+
+# OS generated files
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+*.bak
+*.orig
+*.tmp
+*.temp
+
+# ==========================================
+# Environment & Secrets
+# ==========================================
+
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+*.keystore
+*.jks
+
+secrets/
+credentials/
+private/
+*.secret
+*.token
+*.credentials
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+.ssh/
+
+# ==========================================
+# Logs
+# ==========================================
+
+*.log
+logs/
+log/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ==========================================
+# Temporary files
+# ==========================================
+
+tmp/
+temp/
+.cache/
+.cache-*/
+*.pid
+*.seed
+*.stackdump
+*.core
+core.*
+
+# ==========================================
+# Backup & Archives
+# ==========================================
+
+*.backup
+*.bak
+*.old
+*.orig
+*.save
+*.swp
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.rar
+
+# ==========================================
+# Build & Distribution
+# ==========================================
+
+build/
+dist/
+out/
+release/
+artifacts/
+coverage/
+htmlcov/
+
+# ==========================================
+# Bash / Shell
+# ==========================================
+
+*.bash_history
+.bash_history
+.zsh_history
+shellcheck-output.txt
+
+# ==========================================
+# Go
+# ==========================================
+
+vendor/
+*.test
+*.out
+coverage.txt
+go.work.sum
+
+# ==========================================
+# Python
+# ==========================================
+
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.venv/
+venv/
+ENV/
+.pytype/
+
+# ==========================================
+# Node.js
+# ==========================================
+
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.next/
+.nuxt/
+.svelte-kit/
+
+# ==========================================
+# Docker
+# ==========================================
+
+docker-data/
+docker-volumes/
+.docker/
+*.docker.tar
+
+# ==========================================
+# Test artifacts
+# ==========================================
+
+test-results/
+test-output/
+test-reports/
+*.junit.xml
+*.coverage
+
+# ==========================================
+# Local configuration
+# ==========================================
+
+.local/
+.localrc
+config.local.*
+*.local.yaml
+*.local.yml
+*.local.json
+
+# ==========================================
+# Generated documentation
+# ==========================================
+
+docs/generated/
+site/
+
+# ==========================================
+# Runtime state
+# ==========================================
+
+run/
+runtime/
+state/
+*.sock
+
+# ==========================================
+# Terraform / Infrastructure
+# ==========================================
+
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
