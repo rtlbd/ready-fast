@@ -1,0 +1,195 @@
+#!/usr/bin/env bash
+# ready-fast - command-line entry point of the ready-fast toolkit.
+set -Eeuo pipefail
+
+RF_SELF="$(readlink -f -- "${BASH_SOURCE[0]}")"
+RF_ROOT="$(dirname -- "$RF_SELF")"
+
+# shellcheck source=lib/common.sh
+. "$RF_ROOT/lib/common.sh"
+
+# Every sub-command the CLI accepts. tools/validate-docs.py reads this line.
+READY_FAST_COMMANDS="list run info doctor version help"
+
+rf_cli_usage() {
+  cat <<'USAGE'
+ready-fast - One Command. Everything Ready.
+
+Usage:
+  ready-fast <command> [arguments]
+
+Commands:
+  list                      Show all available scripts
+  run <script> [options]    Run a script (use --help after the script name for its options)
+  info <script>             Show the help text of a script
+  doctor                    Check whether this system is supported and ready
+  version                   Show the ready-fast version
+  help                      Show this help
+
+Examples:
+  ready-fast list
+  ready-fast doctor
+  ready-fast info docker-install
+  sudo ready-fast run docker-install --dry-run
+  sudo ready-fast run docker-install
+
+Exit codes:
+  0  success
+  1  failure, or warnings reported by a check
+  2  wrong usage (unknown command, script or option)
+USAGE
+}
+
+rf_cli_version() {
+  local version="unknown"
+  if [[ -r "$RF_ROOT/VERSION" ]]; then
+    version="$(head -n 1 "$RF_ROOT/VERSION")"
+  fi
+  printf 'ready-fast %s\n' "$version"
+}
+
+# Print the names of all scripts, one per line.
+rf_cli_script_names() {
+  local file
+  for file in "$RF_ROOT"/scripts/*.sh; do
+    [[ -e "$file" ]] || continue
+    basename -- "$file" .sh
+  done
+}
+
+# rf_cli_script_meta <file> <key>  -> value of a "# Key: value" header line
+rf_cli_script_meta() {
+  sed -n "s/^# $2: //p" "$1" | head -n 1
+}
+
+# Resolve a script name to its file, or exit with a usage error.
+rf_cli_script_path() {
+  local name="$1" path
+  if [[ ! "$name" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+    rf_usage_error "Invalid script name: $name"
+  fi
+  path="$RF_ROOT/scripts/$name.sh"
+  if [[ ! -f "$path" ]]; then
+    rf_error "Unknown script: $name"
+    rf_error "Run 'ready-fast list' to see the available scripts."
+    exit 2
+  fi
+  printf '%s\n' "$path"
+}
+
+rf_cli_list() {
+  local name file
+  printf '%-18s %-10s %s\n' "SCRIPT" "ROOT" "DESCRIPTION"
+  while IFS= read -r name; do
+    file="$RF_ROOT/scripts/$name.sh"
+    printf '%-18s %-10s %s\n' "$name" \
+      "$(rf_cli_script_meta "$file" "Requires-Root")" \
+      "$(rf_cli_script_meta "$file" "Description")"
+  done < <(rf_cli_script_names)
+}
+
+rf_cli_doctor() {
+  local problems=0 tool arch
+
+  rf_detect_os
+  printf 'ready-fast doctor\n\n'
+
+  if rf_os_supported; then
+    printf '  %-14s %s (supported)\n' "OS:" "$RF_OS_PRETTY"
+  else
+    printf '  %-14s %s (NOT supported)\n' "OS:" "$RF_OS_PRETTY"
+    problems=$((problems + 1))
+  fi
+
+  arch="$(rf_arch)"
+  if rf_arch_supported; then
+    printf '  %-14s %s (supported)\n' "Architecture:" "$arch"
+  else
+    printf '  %-14s %s (NOT supported)\n' "Architecture:" "$arch"
+    problems=$((problems + 1))
+  fi
+
+  if rf_is_root; then
+    printf '  %-14s %s\n' "Privileges:" "root"
+  else
+    printf '  %-14s %s\n' "Privileges:" "normal user (use sudo for scripts that change the system)"
+  fi
+
+  if rf_systemd_running; then
+    printf '  %-14s %s\n' "systemd:" "running"
+  else
+    printf '  %-14s %s\n' "systemd:" "not running (services cannot be started automatically)"
+  fi
+
+  printf '\n  Required tools:\n'
+  for tool in apt-get dpkg tar sha256sum awk grep sed; do
+    if rf_has_cmd "$tool"; then
+      printf '    %-12s found\n' "$tool"
+    else
+      printf '    %-12s MISSING\n' "$tool"
+      problems=$((problems + 1))
+    fi
+  done
+
+  printf '\n  Optional tools:\n'
+  for tool in curl ip ss systemctl sshd ufw docker; do
+    if rf_has_cmd "$tool"; then
+      printf '    %-12s found\n' "$tool"
+    else
+      printf '    %-12s not installed\n' "$tool"
+    fi
+  done
+
+  printf '\n'
+  if ((problems > 0)); then
+    rf_error "$problems problem(s) found. ready-fast scripts may refuse to run on this system."
+    return 1
+  fi
+  rf_ok "This system is ready for ready-fast."
+}
+
+main() {
+  local command="${1:-help}"
+  if (($# > 0)); then
+    shift
+  fi
+
+  case "$command" in
+    help | -h | --help)
+      rf_cli_usage
+      ;;
+    version | -V | --version)
+      rf_cli_version
+      ;;
+    list)
+      rf_cli_list
+      ;;
+    doctor)
+      rf_cli_doctor
+      ;;
+    info)
+      if (($# != 1)); then
+        rf_usage_error "Usage: ready-fast info <script>"
+      fi
+      local info_path
+      info_path="$(rf_cli_script_path "$1")"
+      bash "$info_path" --help
+      ;;
+    run)
+      if (($# < 1)); then
+        rf_usage_error "Usage: ready-fast run <script> [options]"
+      fi
+      local run_path
+      run_path="$(rf_cli_script_path "$1")"
+      shift
+      exec bash "$run_path" "$@"
+      ;;
+    *)
+      rf_error "Unknown command: $command"
+      rf_error "Available commands: $READY_FAST_COMMANDS"
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"
